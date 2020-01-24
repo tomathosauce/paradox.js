@@ -11,5 +11,8 @@
     "paradox"
   ],
   "author": "Chi San Fung",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.0"
+  }
 }
