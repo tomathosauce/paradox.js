@@ -1,74 +1,128 @@
 const fs = require("fs")
+var argv = require('minimist')(process.argv.slice(1));
+var {byte, integer, longint, char, pchar, word, pointer} = require("./src/types")
 
-var file = fs.readFileSync("./tarticulos.DB")
 
-/*
- Pascal terms are used to describe data types:
-     byte is 1 byte unsigned;
-     integer is a 2-byte signed integer;
-     word is a 2-byte unsigned integer;
-     longint is a 4-byte signed integer;
-     char is a 1-byte character;
-     pchar is a pointer to a character;
-     ^ modifies any type definition to a pointer to that type;
-     ^pchar is a pointer to a pointer to a character.
-     */
 
-class byte {
-    constructor(buffer, bigEndian = true){
-        this.buffer = buffer
-        this.bigEndian = bigEndian
-    }
-
-    getValue(){
-        if(this.bigEndian){
-            return this.buffer.readUInt8()
-        } else {
-            return this.buffer.reverse().readUInt8()
-        }
-    }
-}
-
-class integer {
-    constructor(buffer, bigEndian = true){
-        this.buffer = buffer
-        this.bigEndian = bigEndian
-    }
-    
-    getValue(){
-        if(this.bigEndian){
-            return this.buffer.readUInt16LE()
-        } else {
-            return this.buffer.reverse().readUInt16LE()
-        }
-    }
-}
-
-class longint {
-    constructor(buffer, bigEndian = true){
-        this.buffer = buffer
-        this.bigEndian = bigEndian
-    }
-    
-    getValue(){
-        if(this.bigEndian){
-            return this.buffer.readBigInt64LE()
-        } else {
-            return this.buffer.reverse().readBigInt64LE()
-        }
-    }
-}
-
-class Header {
+class ParadoxHeader {
     constructor(buffer){
-        this.recordSize = new integer (buffer.slice(0,2), false) 
-        this.headerSize = new integer (buffer.slice(3,5), false)
-        this.fileType = new byte (buffer.slice(4,5))
-        this.maxTableSize = new byte(buffer.slice(5,6))
-        this.numRecords = new longint(buffer.slice(6,10))
+        this.recordSize = new integer (buffer, 0, false) 
+
+        this.headerSize = new integer (buffer, this.recordSize.upperlimmit, false)
+
+        this.fileType = new byte (buffer, this.headerSize.upperlimmit)
+
+        this.maxTableSize = new byte(buffer, this.fileType.upperlimmit)
+
+        this.numRecords = new longint(buffer, this.maxTableSize.upperlimmit, false)
+
+        this.nextBlock = new word(buffer, this.numRecords.upperlimmit)
+
+        this.fileBlocks = new word(buffer, this.nextBlock.upperlimmit)
+
+        this.firstBlock = new word(buffer, this.fileBlocks.upperlimmit)
+
+        this.lastBlock = new word(buffer, this.firstBlock.upperlimmit)
+
+        this.unknown = new word(buffer, this.lastBlock.upperlimmit)
+
+        this.modifiedFlags1 = new byte(buffer, this.unknown.upperlimmit)
+
+        this.indexFieldNumber = new byte(buffer, this.modifiedFlags1.upperlimmit)
+
+        this.primaryIndexWorkspace = new pointer(buffer,this.indexFieldNumber.upperlimmit)
+
+        this.unknown2 = new pointer(buffer, this.primaryIndexWorkspace.upperlimmit)
+
+        //skipped bytes 1e-20,  see /documents/PxFORMAT.txt
+
+        this.numFields = new integer(buffer, parseInt(21, 16))
+
+        this.primaryKeyFields  = new integer(buffer, this.numFields.upperlimmit)
+
+        this.encryption1 = new longint(buffer, this.primaryKeyFields.upperlimmit)
+
+        this.sortOrder = new byte(buffer, this.encryption1.upperlimmit)
+
+        this.modifiedFlags2 = new byte(buffer, this.sortOrder.upperlimmit)
+
+        //skipped bytes 2b-2c,  see /documents/PxFORMAT.txt
+
+        this.changeCount1 = new byte(buffer, parseInt("2d", 16))
+
+        this.changeCount2 = new byte(buffer, this.changeCount1.upperlimmit)
+
+        //skipped byte 2f,  see /documents/PxFORMAT.txt
+
+        this.tableNamePtrPtr = new pchar(buffer, parseInt(30, 16))
+
+        this.fldInfoPtr = new pointer(buffer, this.tableNamePtrPtr.upperlimmit)
+
+        this.writeProtected = new byte(buffer, this.fldInfoPtr.upperlimmit)
+
+        this.fileVersionID = new byte(buffer, this.writeProtected.upperlimmit)
+
+        this.maxBlocks = new word(buffer, this.fileVersionID.upperlimmit)
+
+        //skipped byte 3c,  see /documents/PxFORMAT.txt
+
+        this.auxPasswords = new byte(buffer, parseInt("3d", 16))
+
+        //skipped bytes 3e-3f,  see /documents/PxFORMAT.txt
+
+        this.cryptInfoStartPtr = new pointer(buffer, parseInt(40, 16))
+
+        this.cryptInfoEndPtr = new pointer(buffer, this.cryptInfoStartPtr.upperlimmit)
+
+        //skipped byte 48,  see /documents/PxFORMAT.txt
+
+        this.autoInc = new longint(buffer, parseInt(49, 16))
+
+        //skipped bytes 4d-4e,  see /documents/PxFORMAT.txt
+
+        this.indexUpdateRequired = new byte(buffer, parseInt("4f", 16))
+
+        //skipped bytes 50-54,  see /documents/PxFORMAT.txt
+
+        this.refIntegrity = new byte(buffer, parseInt(55, 16))
+
+        //skipped bytes 56-57,  see /documents/PxFORMAT.txt
+
+        this.unknown3 = new integer(buffer, parseInt(58, 16))
+
+        this.unknown4 = new integer(buffer, this.unknown3.upperlimmit)
+
+        this.encryption2 = new longint(buffer, this.unknown4.upperlimmit)
+
+        this.fileUpdateTime = new longint(buffer, this.encryption2.upperlimmit)
+
+        this.hiFieldID = new integer(buffer, this.fileUpdateTime.upperlimmit)
+
+        this.hiFieldIDinfo = new integer(buffer, this.hiFieldID.upperlimmit)
+
+        this.sometimesNumFields = new integer(buffer, this.hiFieldIDinfo.upperlimmit)
+
+        this.dosGlobalCodePage = new integer(buffer, this.sometimesNumFields.upperlimmit)
+
+        //skipped bytes 6c-6f,  see /documents/PxFORMAT.txt
+
+        this.changeCount4 = new integer(buffer, parseInt(70, 16))
+
     }
 }
 
-var h = new Header(file)
+if (!module.parent) {
+    // this is the main module
+    if(argv.f){
+        var file = fs.readFileSync(argv.f)
+        var h = new ParadoxHeader(file)
+        console.log(h.numRecords.getValue())
+    }
+    
+}
 
-console.log(h.numRecords.getValue())
+
+
+
+
+
