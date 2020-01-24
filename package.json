@@ -1,0 +1,15 @@
+{
+  "name": "paradox.js",
+  "version": "0.1.0",
+  "description": "A library entirely written in javascript for reading paradox databases",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "databases",
+    "paradox"
+  ],
+  "author": "Chi San Fung Zheng",
+  "license": "MIT"
+}
