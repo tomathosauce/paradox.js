@@ -1,15 +1,15 @@
-#Paradox.js
+# Paradox.js
 ***
 
 A library for reading paradox database files (*.db)
 
-###Usage
+### Usage
 
 You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records.
 
 ***
 
-###TODO
+### TODO
 
 1. Improve `convertTimestamp` function.
 2. Add support for "Time" data type by writing `convertTime` function.
