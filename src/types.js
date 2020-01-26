@@ -11,7 +11,7 @@
      */
 
 class byte {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 1
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -27,7 +27,7 @@ class byte {
 }
 
 class char {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 1
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -43,7 +43,7 @@ class char {
 }
 
 class integer {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 2
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -59,7 +59,7 @@ class integer {
 }
 
 class word {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 2
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -76,7 +76,7 @@ class word {
 
 
 class longint {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 4
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -92,7 +92,7 @@ class longint {
 }
 
 class pchar {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 4
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -108,7 +108,7 @@ class pchar {
 }
 
 class pointer {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 4
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.bigEndian = bigEndian
@@ -124,7 +124,7 @@ class pointer {
 }
 
 class TFldInfoRec {
-    constructor(buffer, offset, bigEndian = true){
+    constructor(buffer, offset = 0, bigEndian = true){
         this.upperlimmit = offset + 2
         this.buffer = buffer.slice(offset, this.upperlimmit)
         this.fTypeBuffer = this.buffer.slice(0, 1)
@@ -135,28 +135,6 @@ class TFldInfoRec {
     addName(name){
         this.name = name
     }
-
-    /*
-|      |           fType  fSize(decimal)                                     |
-|      |           -------------------------                                 |
-|      |            $01     v   "A"  Alpha                                   |
-|      |            $02     4   "D"  Date                                    |
-|      |            $03     2   "S"  Short integer                           |
-|      |            $04     4   "I"  Long integer                            |
-|      |            $05     8   "$"  currency                                |
-|      |            $06     8   "N"  Number                                  |
-|      |            $09     1   "L"  Logical                                 |
-|      |            $0C     v   "M"  Memo BLOb                               |
-|      |            $0D     v   "B"  Binary Large Object                     |
-|      |            $0E     v   "F"  Formatted Memo BLOb                     |
-|      |            $0F     v   "O"  OLE                                     |
-|      |            $10     v   "G"  Graphic BLOb                            |
-|      |            $14     4   "T"  Time                                    |
-|      |            $15     8   "@"  Timestamp                               |
-|      |            $16     4   "+"  Autoincrement                           |
-|      |            $17    17*  "#"  BCD                                     |
-|      |            $18     v   "Y"  Bytes                                   |
-    */
     
     getValue(){
         if(this.bigEndian){
