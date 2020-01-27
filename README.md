@@ -1,5 +1,4 @@
 # Paradox.js
-***
 
 A library for reading paradox database files (*.db)
 
@@ -20,7 +19,7 @@ You have to import the ParadoxTable and use `.returnRecords()` method in order t
 
 ***
 
-There are some links below and some documentation in `/documents` in case you want to contribute
+There are some links below, and some documentation written by Randy Beck in `/documents` in case you want to contribute:
 
 + https://www.prestwoodboards.com/ASPSuite/kb/document_view.asp?qid=100060
 + https://sourcedaddy.com/ms-access/understanding-field-data-types.html
