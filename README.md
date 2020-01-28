@@ -2,9 +2,13 @@
 
 A library for reading paradox database files (*.db)
 
+***
+
 ### Usage
 
-You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records.
+You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records. 
+
+When the file size exceeds 100mb it will produce a memory error, so use `--max-old-space-size=8000` whenever necessary.
 
 ***
 
