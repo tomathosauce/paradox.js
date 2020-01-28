@@ -10,12 +10,10 @@ You have to import the ParadoxTable and use `.returnRecords()` method in order t
 
 ### TODO
 
-1. Improve `convertTimestamp` function.
-2. Add support for "Time" data type by writing `convertTime` function.
-3. Test all data types.
-4. Write a function that can make a query to the database
-5. Write a function that converts a table into `.csv` format.
-6. If possible, improve perfomance and maybe do some refactoring.
+1. Test all data types.
+2. Write a function that can make a query to the database
+3. Write a function that converts a table into `.csv` format.
+4. If possible, improve perfomance and maybe do some refactoring.
 
 ***
 
