@@ -2,61 +2,117 @@ const fs = require("fs")
 var argv = require('minimist')(process.argv.slice(1));
 var { byte, integer, longint, char, pchar, word, pointer, TFldInfoRec } = require("./src/types")
 
+
+function classify(number) {
+    switch (number) {
+        case 1:
+            return "Alpha"
+        case 2:
+            return "Date"
+        case 3:
+            return "Short integer"                           
+        case 4:
+            return "Long integer"                            
+        case 5:
+            return "Currency"                                
+        case 6:
+            return "Number"                                  
+        case 9:
+            return "Logical"                                 
+        case 20:
+            return "Time"                                    
+        case 21:
+            return "Timestamp"                               
+        case 22:
+            return "Autoincrement"                           
+        case 12:
+            return "Memo BLOb"                               
+        case 13:
+            return "Binary Large Object"                     
+        case 14:
+            return "Formatted Memo BLOb"                     
+        case 15:
+            return "OLE"                                     
+        case 16:
+            return "Graphic BLOb"                            
+        case 23:
+            return "BCD"                                     
+        case 24:
+            return "Bytes"                                   
+        default:
+            return "Unknown"
+    }
+}
+
 function unsetBit(buffer) {
     var b = buffer
-    var firstByte = b[0] - 2 ** (4 * 2 - 1)
+    var firstByte =  b[0] - 2 ** (4 * 2 - 1) 
 
     if (b.length === 1) {
         if (buffer.readUInt8() !== 0) {
             b.writeUInt8(firstByte)
         } else {
-            return 0
+            return null
         }
 
     } else if (b.length === 2) {
         if (buffer.readUInt16BE() !== 0) {
             b.writeUInt8(firstByte)
         } else {
-            return 0
+            return null
         }
     } else if (b.length === 4) {
-        if (buffer.readUInt16BE() !== 0) {
+        if (buffer.readUInt32BE() !== 0) {
             b.writeUInt8(firstByte)
         } else {
-            return 0
+            return null
         }
     } else {
         if (buffer.readDoubleBE() !== 0) {
-            b.writeUInt8(firstByte)
+            
+                if(firstByte < 0){
+                    firstByte = b[0] + 2 ** (4 * 2 - 1) 
+                }
+                b.writeUInt8(firstByte)
+                
+           
+            
         } else {
-            return 0
+            return null
         }
     }
 
     return b
 }
 
-function convertTime() {
-    var b = unsetBit(buffer).readUInt16BE()
-    // TODO
+function convertTime(buffer) {
+    var seconds = unsetBit(buffer)
+    if(seconds !== null){
+        return new Date(seconds.readUInt32BE()).toISOString().substr(11, 8);
+    }
+    return null
 }
 
 function convertTimestamp(buffer, dateOffset = 0) {
-    var b = unsetBit(buffer).readDoubleBE()
-    var d = new Date("0001-01-01")
-    d.setHours(0)
-    d.setMinutes(0)
-    d.setSeconds(0)
-    //console.log(d.toUTCString(), b)
+    var b = unsetBit(buffer)
     
-    var date = (new Date(d.getTime()+b+dateOffset))//.getTime()
-    //console.log(date.toUTCString())
-    return date
+    if(b !== null){
+        
+        var date = (new Date(b.readDoubleBE() - 1000 * 719163 * 86400+dateOffset))
+
+        return date
+    }
+    
+    return null
 }
 
 function convertDate(buffer) {
     var date = new Date("0001-01-01");
     var days = unsetBit(buffer)
+
+    if(days === null){
+        return null
+    }
     
     if (days) {
         date.setDate(date.getDate() + days.readUInt32BE());
@@ -225,6 +281,8 @@ class ParadoxTable {
 
         this.TFldInfoRecArray = TFldInfoRecArray
 
+        //console.log(TFldInfoRecArray)
+
         this.firstaddDataSize = this.buffer.slice(this.headerSize.getValue() + 4, this.headerSize.getValue() + 6)
 
         //there must be a better way to find the portion of the .db file which contains all the field names
@@ -232,21 +290,30 @@ class ParadoxTable {
         //I decided to skip what comes after the field names, see /documents/PxFORMAT.txt . I'm assuming that the database to be read is unencrypted
     }
 
-    returnRecords(nb, dateOffset = 0) {
+    returnRecords(nb, disableWarning = false, dateOffset = 0) {
         var recordsStart = this.headerSize.getValue() + 6
         var records = []
         var blockSize = this.maxTableSize.getValue() * 1024
+        //console.log("BlockSize", blockSize)
+        //console.log("BlockSize", this.fileBlocks.getValue())
 
+        var numberOfBlocks = this.fileBlocks.getValue()
         var getAddDataSize = (buff, offset) => buff.slice(offset + 4, offset + 6)
 
-        var numberOfBlocks = nb || this.fileBlocks.getValue()
+        if(nb){
+            if(Number(nb) < this.fileBlocks.getValue()){
+                numberOfBlocks =  nb
+            } 
+        }
 
+        var r = 0
         //Go through each block
         for (var i = 0; i < numberOfBlocks; i++) {
             var addDataSize = getAddDataSize(this.buffer, this.headerSize.getValue() + blockSize * i)
+            //console.log( (this.headerSize.getValue() + blockSize * i).toString(16))
             var numRecordsInBlock = addDataSize.readUInt16LE() / this.recordSize.getValue() + 1
             var recordsStart = this.headerSize.getValue() + blockSize * i + 6
-
+            //console.log(recordsStart.toString(16), r/this.numRecords.getValue())
             //Go through each record
             for (var j = 0; j < numRecordsInBlock; j++) {
                 var record = []
@@ -257,25 +324,32 @@ class ParadoxTable {
                     record.push(new Field(this.TFldInfoRecArray[k].name,
                         this.TFldInfoRecArray[k].getType(),
                         this.buffer.slice(recordsStart,
-                            recordsStart + this.TFldInfoRecArray[k].getSize()),"ascii",dateOffset
+                            recordsStart + this.TFldInfoRecArray[k].getSize()),"ascii", disableWarning, dateOffset
                     )
                     )
                     recordsStart += this.TFldInfoRecArray[k].getSize()
+                    
                 }
+                r++
                 records.push(record)
             }
         }
         return records
 
     }
+
+    dumpToCSV(separator=";"){
+        var toBeConverted = this.returnRecords()
+    }
 }
 
 class Field {
-    constructor(name, type, value, encoding = "ascii", dateOffset = 0) {
+    constructor(name, type, value, encoding = "ascii", disableWarning = false, dateOffset = 0) {
         this.name = name
         this.type = type
         this.valueBuffer = value
         this.hasBeenProperlyDecoded = true
+        this.typeName = classify(type)
         //                         |      |           fType  fSize(decimal)                                     |
         switch (this.type) {
             case 1:
@@ -289,18 +363,21 @@ class Field {
             case 3:
                 //        |      |            $03     2   "S"  Short integer                           |
                 var test = unsetBit(this.valueBuffer)
-                this.value = test ? test.readUInt16LE() : test
+                this.value = test ? test.readUInt16BE() : test
                 break
             case 4:
                 //        |      |            $04     4   "I"  Long integer                            |
                 var test = unsetBit(this.valueBuffer)
-                this.value = test ? test.readUInt32LE() : test
+                this.value = test ? test.readUInt32BE() : test
                 break
             case 5:
             //        |      |            $05     8   "$"  currency                                |
             case 6:
                 //        |      |            $06     8   "N"  Number                                  |
-                this.value = -value.readDoubleBE()
+
+                //When it's empty its value its going to be 0x00 
+                var test = unsetBit(this.valueBuffer)
+                this.value = test ? test.readDoubleBE() : test
                 break
             case 9:
                 //        |      |            $09     1   "L"  Logical                                 |
@@ -308,15 +385,14 @@ class Field {
 
                 if (!test) {
                     this.hasBeenProperlyDecoded = false
-                    //I'm not sure what it means when the boolean is completely filled with zeroes i.e 0x00 or 00000000
                 }
                 this.value = test ? test.readUInt8() : test
 
                 break
             case 20:
                 //        |      |            $14     4   "T"  Time                                    |
-                throw '"Time" data type is currently unsupported!'
-                //break
+                this.value = convertTime(this.valueBuffer)
+                break
             case 21:
                 //        |      |            $15     8   "@"  Timestamp                               |
                 this.hasBeenProperlyDecoded = false
@@ -328,7 +404,7 @@ class Field {
                 //        |      |            $16     4   "+"  Autoincrement                           |
                 var test = unsetBit(this.valueBuffer)
                 this.hasBeenProperlyDecoded = false
-                this.value = test ? test.readUInt32LE() : test
+                this.value = test ? test.readUInt32BE() : test
                 break
             case 12:
             //        |      |            $0C     v   "M"  Memo BLOb                               |
@@ -344,7 +420,7 @@ class Field {
             //        |      |            $17    17*  "#"  BCD                                     |
             case 24:
                 //        |      |            $18     v   "Y"  Bytes                                   |
-
+                console.warn("\x1b[33m", `WARNING: File type of "${this.name}" (${this.typeName}) was not converted, you will have to do it yourself (sorry)`)
                 //I will leave the decoding of these data types for the user of this library because I guess it depends on the type of data stored, unless you'd like to contribute to this proyect
                 this.hasBeenProperlyDecoded = false
                 this.value = this.valueBuffer
@@ -355,17 +431,15 @@ class Field {
                 break
         }
     }
-}
 
-function dumpToCSV(table){
-    // TODO
+
 }
 
 if (!module.parent) {
     if (argv.f) {
         var file = fs.readFileSync(argv.f)
         var t = new ParadoxTable(file)
-        dumpToCSV(table)
+        t.dumpToCSV()
     } else {
         console.log("-f argument required")
     }
