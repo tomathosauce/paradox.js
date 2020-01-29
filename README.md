@@ -23,7 +23,7 @@ You have to import the ParadoxTable and use `.returnRecords()` method in order t
   table.dumpToCSV()
 ```
 
-The `.dumpToCSV()` will create a `output.csv` file. This method also accepts a callback which will receive an array of records (a record is an array of Fields) in case you want to have more control over the output.
+The `.dumpToCSV()` method will create a `output.csv` file. This method also accepts a callback which will receive an array of records (a record is an array of Fields) in case you want to have more control over the output.
 
 ### Notes
 
