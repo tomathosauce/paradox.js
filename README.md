@@ -2,22 +2,38 @@
 
 A library for reading paradox database files (*.db)
 
-***
 
-### Usage
+# Usage
 
-You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records. 
 
-When the file size exceeds 100mb it will produce a memory error, so use `--max-old-space-size=8000` whenever necessary.
 
-***
+```javascript
+  var file = fs.readFileSync("path/to/file")
+  var table = new ParadoxTable(file)
+```
 
-### TODO
+You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records. When the file size exceeds 100mb it will probably produce a memory error, so the use `--max-old-space-size` flag when running a script.
 
-1. Test all data types.
-2. Write a function that can make a query to the database
-3. Write a function that converts a table into `.csv` format.
-4. If possible, improve perfomance and maybe do some refactoring.
+### Creating a CSV file
+
+```javascript
+  var file = fs.readFileSync("path/to/file")
+  var table = new ParadoxTable(file)
+  
+  table.dumpToCSV()
+```
+
+The `.dumpToCSV()` will create a `output.csv` file. This method also accepts a callback which will receive an array of records (a record is an array of Fields) in case you want to have more control over the output.
+
+### Notes
+
+The following data types: Memo BLOb, Binary Large Object, Formatted Memo BLOb, OLE, Graphic BLOb, BCD and Bytes are currently not supported, so you will have to decode them yourself.
+
+# TODO
+
+1. Add support for more data types.
+2. Write a function that can make a query to the database.
+3. If possible, improve perfomance and maybe do some refactoring.
 
 ***
 
