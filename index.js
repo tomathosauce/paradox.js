@@ -10,35 +10,35 @@ function classify(number) {
         case 2:
             return "Date"
         case 3:
-            return "Short integer"                           
+            return "Short integer"
         case 4:
-            return "Long integer"                            
+            return "Long integer"
         case 5:
-            return "Currency"                                
+            return "Currency"
         case 6:
-            return "Number"                                  
+            return "Number"
         case 9:
-            return "Logical"                                 
+            return "Logical"
         case 20:
-            return "Time"                                    
+            return "Time"
         case 21:
-            return "Timestamp"                               
+            return "Timestamp"
         case 22:
-            return "Autoincrement"                           
+            return "Autoincrement"
         case 12:
-            return "Memo BLOb"                               
+            return "Memo BLOb"
         case 13:
-            return "Binary Large Object"                     
+            return "Binary Large Object"
         case 14:
-            return "Formatted Memo BLOb"                     
+            return "Formatted Memo BLOb"
         case 15:
-            return "OLE"                                     
+            return "OLE"
         case 16:
-            return "Graphic BLOb"                            
+            return "Graphic BLOb"
         case 23:
-            return "BCD"                                     
+            return "BCD"
         case 24:
-            return "Bytes"                                   
+            return "Bytes"
         default:
             return "Unknown"
     }
@@ -46,7 +46,7 @@ function classify(number) {
 
 function unsetBit(buffer) {
     var b = buffer
-    var firstByte =  b[0] - 2 ** (4 * 2 - 1) 
+    var firstByte = b[0] - 2 ** (4 * 2 - 1)
 
     if (b.length === 1) {
         if (buffer.readUInt8() !== 0) {
@@ -69,14 +69,20 @@ function unsetBit(buffer) {
         }
     } else {
         if (buffer.readDoubleBE() !== 0) {
-            
-                if(firstByte < 0){
-                    firstByte = b[0] + 2 ** (4 * 2 - 1) 
+            var fillZeroes = (str) => { return ("00000000".substr(str.length) + str) };
+            if (firstByte < 0) {
+                //console.log(buffer)
+                var b2 = Buffer.alloc(8)
+                //There must be a better way to do this
+                for (var i = 0; i < b.length; i++) {
+                    var val = fillZeroes(b[i].toString(2))
+                    var bin = val.split("").map(x => (Number(x)+1)%2).join("")
+                    b2[i] = parseInt(bin, 2)
                 }
-                b.writeUInt8(firstByte)
-                
-           
-            
+                //console.log(b2)
+                return b2
+            }
+            b.writeUInt8(firstByte)
         } else {
             return null
         }
@@ -87,7 +93,7 @@ function unsetBit(buffer) {
 
 function convertTime(buffer) {
     var seconds = unsetBit(buffer)
-    if(seconds !== null){
+    if (seconds !== null) {
         return new Date(seconds.readUInt32BE()).toISOString().substr(11, 8);
     }
     return null
@@ -95,14 +101,14 @@ function convertTime(buffer) {
 
 function convertTimestamp(buffer, dateOffset = 0) {
     var b = unsetBit(buffer)
-    
-    if(b !== null){
-        
-        var date = (new Date(b.readDoubleBE() - 1000 * 719163 * 86400+dateOffset))
+
+    if (b !== null) {
+
+        var date = (new Date(b.readDoubleBE() - 1000 * 719163 * 86400 + dateOffset))
 
         return date
     }
-    
+
     return null
 }
 
@@ -110,10 +116,10 @@ function convertDate(buffer) {
     var date = new Date("0001-01-01");
     var days = unsetBit(buffer)
 
-    if(days === null){
+    if (days === null) {
         return null
     }
-    
+
     if (days) {
         date.setDate(date.getDate() + days.readUInt32BE());
         //console.log(date.getDate(), date, days)
@@ -235,8 +241,6 @@ class ParadoxTable {
             TFldInfoRecArray.push(new TFldInfoRec(buffer, i))
         }
 
-
-
         var pcharArray = []
 
         var j = i
@@ -300,10 +304,10 @@ class ParadoxTable {
         var numberOfBlocks = this.fileBlocks.getValue()
         var getAddDataSize = (buff, offset) => buff.slice(offset + 4, offset + 6)
 
-        if(nb){
-            if(Number(nb) < this.fileBlocks.getValue()){
-                numberOfBlocks =  nb
-            } 
+        if (nb) {
+            if (Number(nb) < this.fileBlocks.getValue()) {
+                numberOfBlocks = nb
+            }
         }
 
         var r = 0
@@ -324,11 +328,11 @@ class ParadoxTable {
                     record.push(new Field(this.TFldInfoRecArray[k].name,
                         this.TFldInfoRecArray[k].getType(),
                         this.buffer.slice(recordsStart,
-                            recordsStart + this.TFldInfoRecArray[k].getSize()),"ascii", disableWarning, dateOffset
+                            recordsStart + this.TFldInfoRecArray[k].getSize()), "ascii", disableWarning, dateOffset
                     )
                     )
                     recordsStart += this.TFldInfoRecArray[k].getSize()
-                    
+
                 }
                 r++
                 records.push(record)
@@ -338,19 +342,90 @@ class ParadoxTable {
 
     }
 
-    dumpToCSV(separator=";"){
-        var toBeConverted = this.returnRecords()
+    dumpToCSV(callback, separator = ";") {
+
+
+        var FIELDS = this.TFldInfoRecArray.map(x => x.name).join(separator)
+        fs.writeFileSync("./output.csv", FIELDS)
+
+
+        function writeBlock(block, callback) {
+            var out = ""
+            if (callback) {
+                out = callback(block)
+            } else {
+                var excluded = [12, 13, 14, 15, 16, 23, 24]
+                var out = []
+                for (var i = 0; i < block.length; i++) {
+                    var r = block[i].map(x => {
+                        if (excluded.indexOf(x.type) === -1) {
+                            if (x.type === 1) {
+                                return x.value.replace(/\0/g, '')
+                            }
+                            return x.value
+                        } else {
+                            return `[ ${x.typeName} ]`
+                        }
+                    })
+
+                    out.push(r.join(separator))
+                }
+
+                out = "\n" + out.join("\n")
+            }
+
+            fs.appendFileSync("./output.csv", out)
+        }
+
+        var recordsStart = this.headerSize.getValue() + 6
+
+        var blockSize = this.maxTableSize.getValue() * 1024
+        //console.log("BlockSize", blockSize)
+        //console.log("BlockSize", this.fileBlocks.getValue())
+
+        var numberOfBlocks = this.fileBlocks.getValue()
+        var getAddDataSize = (buff, offset) => buff.slice(offset + 4, offset + 6)
+
+        //Go through each block
+        for (var i = 0; i < numberOfBlocks; i++) {
+            var addDataSize = getAddDataSize(this.buffer, this.headerSize.getValue() + blockSize * i)
+            //console.log( (this.headerSize.getValue() + blockSize * i).toString(16))
+            var numRecordsInBlock = addDataSize.readUInt16LE() / this.recordSize.getValue() + 1
+            var recordsStart = this.headerSize.getValue() + blockSize * i + 6
+            //console.log(recordsStart.toString(16), r/this.numRecords.getValue())
+            //Go through each record
+            var records = []
+            for (var j = 0; j < numRecordsInBlock; j++) {
+                var record = []
+
+                //Go through each field
+                for (var k = 0; k < this.TFldInfoRecArray.length; k++) {
+
+                    record.push(new Field(this.TFldInfoRecArray[k].name,
+                        this.TFldInfoRecArray[k].getType(),
+                        this.buffer.slice(recordsStart,
+                            recordsStart + this.TFldInfoRecArray[k].getSize()), "ascii"
+                    )
+                    )
+                    recordsStart += this.TFldInfoRecArray[k].getSize()
+
+                }
+                records.push(record)
+            }
+
+            writeBlock(records, callback)
+        }
     }
 }
 
 class Field {
-    constructor(name, type, value, encoding = "ascii", disableWarning = false, dateOffset = 0) {
+    constructor(name, type, value, encoding = "ascii", dateOffset = 0) {
         this.name = name
         this.type = type
         this.valueBuffer = value
         this.hasBeenProperlyDecoded = true
         this.typeName = classify(type)
-        //                         |      |           fType  fSize(decimal)                                     |
+                //        |      |           fType  fSize(decimal)                                     |
         switch (this.type) {
             case 1:
                 //        |      |            $01     v   "A"  Alpha                                   |
@@ -371,7 +446,7 @@ class Field {
                 this.value = test ? test.readUInt32BE() : test
                 break
             case 5:
-            //        |      |            $05     8   "$"  currency                                |
+                //        |      |            $05     8   "$"  currency                                |
             case 6:
                 //        |      |            $06     8   "N"  Number                                  |
 
@@ -396,8 +471,6 @@ class Field {
             case 21:
                 //        |      |            $15     8   "@"  Timestamp                               |
                 this.hasBeenProperlyDecoded = false
-                //I have noticed that the timestamps are off by a few minutes, so there is dateOffset to correct for that
-
                 this.value = convertTimestamp(this.valueBuffer, dateOffset)
                 break
             case 22:
@@ -407,20 +480,19 @@ class Field {
                 this.value = test ? test.readUInt32BE() : test
                 break
             case 12:
-            //        |      |            $0C     v   "M"  Memo BLOb                               |
+                //        |      |            $0C     v   "M"  Memo BLOb                               |
             case 13:
-            //        |      |            $0D     v   "B"  Binary Large Object                     |
+                //        |      |            $0D     v   "B"  Binary Large Object                     |
             case 14:
-            //        |      |            $0E     v   "F"  Formatted Memo BLOb                     |
+                //        |      |            $0E     v   "F"  Formatted Memo BLOb                     |
             case 15:
-            //        |      |            $0F     v   "O"  OLE                                     |
+                //        |      |            $0F     v   "O"  OLE                                     |
             case 16:
-            //        |      |            $10     v   "G"  Graphic BLOb                            |
+                //        |      |            $10     v   "G"  Graphic BLOb                            |
             case 23:
-            //        |      |            $17    17*  "#"  BCD                                     |
+                //        |      |            $17    17*  "#"  BCD                                     |
             case 24:
                 //        |      |            $18     v   "Y"  Bytes                                   |
-                console.warn("\x1b[33m", `WARNING: File type of "${this.name}" (${this.typeName}) was not converted, you will have to do it yourself (sorry)`)
                 //I will leave the decoding of these data types for the user of this library because I guess it depends on the type of data stored, unless you'd like to contribute to this proyect
                 this.hasBeenProperlyDecoded = false
                 this.value = this.valueBuffer
