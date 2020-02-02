@@ -8,6 +8,9 @@ A library for reading paradox database files (*.db)
 
 
 ```javascript
+  var ParadoxTable = require("paradox.js")
+  var fs = require("fs")
+  
   var file = fs.readFileSync("path/to/file")
   var table = new ParadoxTable(file)
 ```
@@ -17,9 +20,6 @@ You have to import the ParadoxTable and use `.returnRecords()` method in order t
 ### Creating a CSV file
 
 ```javascript
-  var file = fs.readFileSync("path/to/file")
-  var table = new ParadoxTable(file)
-  
   table.dumpToCSV()
 ```
 
