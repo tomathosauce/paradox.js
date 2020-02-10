@@ -1,6 +1,6 @@
 {
   "name": "paradox.js",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "A library entirely written in javascript for reading paradox databases",
   "main": "index.js",
   "scripts": {
