@@ -15,7 +15,23 @@ A library for reading paradox database files (*.db)
   var table = new ParadoxTable(file)
 ```
 
-You have to import the ParadoxTable and use `.returnRecords()` method in order to get all records. When the file size exceeds 100mb it will probably produce a memory error, so the use `--max-old-space-size` flag when running a script.
+### Getting records
+
+You have to import the ParadoxTable and use `.findRecords()` method in order to get all records. This method also accepts an object which can contain the following properties: `maxBlockNumber` (an integer), `filter` (a function), `disableWarning` (a boolean).
+
+
+```javascript
+  var records = table.findRecords({
+    filter: function(record){
+      if(someCriteria(record)){
+        return true
+      }
+      return false
+    }
+  })
+```
+
+When the file size exceeds 100mb it will probably produce a memory error, so the use `--max-old-space-size` flag when running your script.
 
 ### Creating a CSV file
 
@@ -32,8 +48,7 @@ The following data types: Memo BLOb, Binary Large Object, Formatted Memo BLOb, O
 # TODO
 
 1. Add support for more data types.
-2. Write a function that can make a query to the database.
-3. If possible, improve perfomance and maybe do some refactoring.
+2. If possible, improve perfomance and maybe do some refactoring.
 
 ***
 

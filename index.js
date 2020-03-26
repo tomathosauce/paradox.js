@@ -294,7 +294,70 @@ class ParadoxTable {
         //I decided to skip what comes after the field names, see /documents/PxFORMAT.txt . I'm assuming that the database to be read is unencrypted
     }
 
+    findRecords(options = {}) {
+        var recordsStart = this.headerSize.getValue() + 6
+        var records = []
+        var blockSize = this.maxTableSize.getValue() * 1024
+        //console.log("BlockSize", blockSize)
+        //console.log("BlockSize", this.fileBlocks.getValue())
+
+        var {maxBlockNumber, filter, disableWarning} = options
+        if(!disableWarning){
+            disableWarning = false
+        }
+
+        if(!filter){
+            filter = ()=>{return true}
+        }
+        //nb, filter=()=>{return true}, disableWarning = false, dateOffset = 0
+
+        var numberOfBlocks = this.fileBlocks.getValue()
+        var getAddDataSize = (buff, offset) => buff.slice(offset + 4, offset + 6)
+
+        if (maxBlockNumber) {
+            if (Number(maxBlockNumber) < this.fileBlocks.getValue()) {
+                numberOfBlocks = nb
+            }
+        }
+
+        var r = 0
+        //Go through each block
+        for (var i = 0; i < numberOfBlocks; i++) {
+            var addDataSize = getAddDataSize(this.buffer, this.headerSize.getValue() + blockSize * i)
+            //console.log( (this.headerSize.getValue() + blockSize * i).toString(16))
+            var numRecordsInBlock = addDataSize.readUInt16LE() / this.recordSize.getValue() + 1
+            var recordsStart = this.headerSize.getValue() + blockSize * i + 6
+            //console.log(recordsStart.toString(16), r/this.numRecords.getValue())
+            //Go through each record
+            for (var j = 0; j < numRecordsInBlock; j++) {
+                var record = {}
+
+                //Go through each field
+                for (var k = 0; k < this.TFldInfoRecArray.length; k++) {
+
+                    record[this.TFldInfoRecArray[k].name] = new Field(this.TFldInfoRecArray[k].name,
+                        this.TFldInfoRecArray[k].getType(),
+                        this.buffer.slice(recordsStart,
+                            recordsStart + this.TFldInfoRecArray[k].getSize()), "ascii", disableWarning)
+                    
+                    recordsStart += this.TFldInfoRecArray[k].getSize()
+
+                }
+                r++
+
+
+                if(filter(record)){
+                    records.push(record)
+                }
+                
+            }
+        }
+        return records
+
+    }
+
     returnRecords(nb, disableWarning = false, dateOffset = 0) {
+        /*This method will probably be deprecated */
         var recordsStart = this.headerSize.getValue() + 6
         var records = []
         var blockSize = this.maxTableSize.getValue() * 1024
